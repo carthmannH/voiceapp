@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Comparison</title>
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Voice Comparison</h1>
+    <form id="compareForm" enctype="multipart/form-data">
+        <label for="file1">Select Audio File 1:</label>
+        <input type="file" id="file1" name="file1" accept=".wav, .mp3" required><br>
+        <label for="file2">Select Audio File 2:</label>
+        <input type="file" id="file2" name="file2" accept=".wav, .mp3" required><br>
+        <button type="button" onclick="compare()">Compare</button>
+    </form>
+
+    <div id="resultContainer"></div>
+
+    <script>
+    function compare() {
+        var form = document.getElementById('compareForm');
+        var formData = new FormData(form);
+
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    displayResults(response);
+                } else {
+                    console.error('Error:', xhr.status);
+                }
+            }
+        };
+        xhr.open('POST', '/compare', true);
+        xhr.send(formData);
+    }
+
+    function displayResults(response) {
+        var resultContainer = document.getElementById('resultContainer');
+        if (resultContainer) {
+            // Display similarity scores
+            resultContainer.innerHTML = '<h2>Comparison Results:</h2>' +
+                                         '<p>MFCC Similarity: ' + response.mfcc_similarity + '</p>' +
+                                         '<p>Pitch Similarity: ' + response.pitch_similarity + '</p>';
+
+            // Draw line graph
+            var ctx = document.createElement('canvas').getContext('2d');
+            resultContainer.appendChild(ctx.canvas);
+            var myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: response.words1_actual, // Use actual words from audio file 1 as labels
+                    datasets: [{
+                        label: 'Pitch',
+                        data: response.pitch_data, // Actual pitch data
+                        borderColor: 'blue',
+                        backgroundColor: 'transparent',
+                    }, {
+                        label: 'Timbre',
+                        data: response.timbre_data, // Actual timbre data
+                        borderColor: 'green',
+                        backgroundColor: 'transparent',
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+
+            // Display voice transcript
+            var transcriptContainer = document.createElement('div');
+            transcriptContainer.innerHTML = '<h2>Voice Transcript:</h2>' +
+                                            '<p>Audio File 1: ' + response.words1_actual.join(', ') + '</p>' +
+                                            '<p>Audio File 2: ' + response.words2_actual.join(', ') + '</p>';
+
+            // Display recommendations
+            var recommendationsContainer = document.createElement('div');
+            recommendationsContainer.innerHTML = '<h2>Recommendations:</h2>' +
+                                                 '<p>Based on the comparison, consider the following:</p>' +
+                                                 '<ul>' +
+                                                 '<li>Rehearse the pronunciation of specific words or phrases.</li>' +
+                                                 '<li>Focus on improving pitch consistency.</li>' +
+                                                 '<li>Work on enhancing timbre variations for better expressiveness.</li>' +
+                                                 '</ul>';
+            resultContainer.appendChild(transcriptContainer);
+            resultContainer.appendChild(recommendationsContainer);
+        }
+    }
+    </script>
+</body>
+</html>
